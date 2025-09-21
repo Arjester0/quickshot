@@ -1,37 +1,76 @@
-use crossterm::event::{self, Event}; 
-use ratatui::{text::Text, Frame}; 
-use std::io::{self, BufRead}; 
+mod app; 
+
+use std::io::{self, Write}; 
 use std::error::Error;
+use std::fs;
+use std::path::{Path, PathBuf};
+use ratatui::{
+    crossterm::event::{self, Event, KeyCode, KeyEventKind},
+    layout::{Constraint, Layout, Position},
+    style::{Color, Modifier, Style, Stylize},
+    text::{Line, Span, Text},
+    widgets::{Block, List, ListItem, Paragraph},
+    DefaultTerminal, Frame,
+};
+use std::process::Command;
 
-fn main() {
+use crate::app::App;
+
+fn main() -> Result<(),Box<dyn Error>> {
+    ensure_tmux_available();
     let mut dir = String::new();
-    if dir == "" {
-        get_dir(&mut dir);
+    load_config(&mut dir); 
+    if dir.is_empty() {
+        dir = get_dir()?;
+        save_config(&dir);
     } 
-    let mut terminal = ratatui::init(); 
-    loop {
-        terminal.draw(draw).expect("failed to draw frame"); 
-        if matches!(event::read().expect("failed to read event"), Event::Key(_)) {
-            break;
-        }
-    }
-    ratatui::restore(); 
+    let paths = get_paths(&dir)?;
+    let terminal = ratatui::init(); 
+    let app_result = App::new().run(terminal, paths);
+    ratatui::restore();
+    app_result 
 }
 
-fn draw(frame: &mut Frame) {
-    let text = Text::raw("Hello World");
-    frame.render_widget(text, frame.area());
-}
-
-fn get_dir(dir: &mut String) -> Result<(), Box<dyn Error>> {
-    println!("Enter the PATH for your project directory"); 
-    let stdin = io::stdin(); 
-    let mut handle = stdin.lock(); 
-    let mut buf = vec![]; 
-    if dir == "" {
-        handle.read_until(b'\n', &mut buf)?;
-        *dir = String::from_utf8_lossy(&buf).to_string(); 
-    }
-
-    Ok(())
+// Please rewrite this to be more efficient and not retarded
+fn load_config(dir: &mut String) {
+    let mut temp = std::fs::read_to_string("quickshot.config").unwrap();
+    temp = temp.split_off(5);
+    temp.pop();
+    temp.pop();
+    *dir = temp.trim().to_string();
 } 
+
+fn save_config(dir: &String) {
+    let path_config = format!("dir={}", dir);  
+    std::fs::write("quickshot.config", path_config);
+} 
+
+fn get_paths(string_dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let dir = Path::new(string_dir); 
+    
+    let mut paths: Vec<PathBuf> = fs::read_dir(dir)? 
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .collect(); 
+    paths.sort();
+    Ok(paths)
+} 
+
+fn get_dir() -> Result<(String), Box<dyn Error>> {
+    println!("\nEnter the PATH for your project directory"); 
+    io::stdout().flush()?;
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+} 
+
+fn ensure_tmux_available() -> io::Result<()> {
+    let status = Command::new("tmux").arg("-V").status();
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        _ => Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "tmux not found (install it, or run under WSL/mac/Linux)"
+        )),
+    }
+}
