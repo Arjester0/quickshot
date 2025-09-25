@@ -57,8 +57,6 @@ impl App {
             .unwrap_or(self.input.len())
     }
 
-
-
     fn delete_char(&mut self) {
         let is_not_cursor_leftmost = self.character_index != 0; 
         if is_not_cursor_leftmost {
@@ -81,12 +79,24 @@ impl App {
         self.character_index = 0;
     }
 
-    fn submit_message(&mut self) {
+    fn select_project(&mut self) {
         self.input.clear();
         self.reset_cursor();
+        let input_content: usize = self.input.parse().expect("balls");
+        let path_strings: Vec<String> = self
+            .paths
+            .iter()
+            .enumerate()
+            .map(|(i, m)| m.to_string_lossy().into_owned())
+            .collect();
+        let dir = path_strings[input_content].clone(); 
+        let name = dir.clone(); 
+        // iterating through paths and picking based off number 
+        // TODO: make this a string to string search 
+        self.open_or_create_tmux_session(name.trim(), dir); 
     }
 
-    fn open_or_create_tmux_session(&self, name: &str, dir: &Path) -> io::Result<()> {
+    fn open_or_create_tmux_session(&self, name: &str, dir: String) -> io::Result<()> {
         // Spawn tmux attached to the current terminal
         let status = Command::new("tmux")
             .arg("new-session")
@@ -119,7 +129,7 @@ impl App {
                         _ => {}
                     },
                     InputMode::Editing if key.kind == KeyEventKind::Press => match key.code {
-                        KeyCode::Enter => self.submit_message(),
+                        KeyCode::Enter => self.select_project(),
                         KeyCode::Char(to_insert) => self.enter_char(to_insert),
                         KeyCode::Backspace => self.delete_char(),
                         KeyCode::Left => self.move_cursor_left(),
@@ -195,6 +205,7 @@ impl App {
                 input_area.y + 1,
             )),
         }
+
 
         let paths: Vec<ListItem> = self
             .paths
