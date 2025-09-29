@@ -19,11 +19,12 @@ use crate::app::App;
 fn main() -> Result<(),Box<dyn Error>> {
     ensure_tmux_available();
     let mut dir = String::new();
-    load_config(&mut dir); 
+    check_config(&mut dir); 
     if dir.is_empty() {
         dir = get_dir()?;
         save_config(&dir);
     } 
+    load_config(&mut dir); 
     let paths = get_paths(&dir)?;
     let terminal = ratatui::init(); 
     let app_result = App::new().run(terminal, paths);
@@ -31,12 +32,21 @@ fn main() -> Result<(),Box<dyn Error>> {
     app_result 
 }
 
-// Please rewrite this to be more efficient and not retarded
+fn check_config(dir: &mut String) -> Result<(), Box<dyn Error>> {
+    if Path::new("quickshot.config").exists() {
+        *dir = "config".to_string();
+        Ok(())
+    } else {
+        Ok(())
+    } 
+} 
+
 fn load_config(dir: &mut String) {
     let mut temp = std::fs::read_to_string("quickshot.config").unwrap();
     temp = temp.split_off(5);
     temp.pop();
     temp.pop();
+    println!("{}", temp);
     *dir = temp.trim().to_string();
 } 
 
@@ -56,12 +66,12 @@ fn get_paths(string_dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
 } 
 
 fn get_dir() -> Result<(String), Box<dyn Error>> {
-    println!("\nEnter the PATH for your project directory"); 
+    println!("\nEnter the PATH for your project directory in the form\n \"/home/user/YOUR_PROJECT_DIR\""); 
     io::stdout().flush()?;
 
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    Ok(input.trim().to_string())
+    Ok(input.to_string())
 } 
 
 fn ensure_tmux_available() -> io::Result<()> {
