@@ -66,7 +66,7 @@ fn get_paths(string_dir: &str) -> Result<Vec<PathBuf>, Box<dyn Error>> {
 } 
 
 fn get_dir() -> Result<(String), Box<dyn Error>> {
-    println!("\nEnter the PATH for your project directory in the form\n \"/home/user/YOUR_PROJECT_DIR\""); 
+    println!("\nEnter the PATH for your project directory in the form\n \"/home/YOUR_USERNAME/YOUR_PROJECT_DIR/\""); 
     io::stdout().flush()?;
 
     let mut input = String::new();
