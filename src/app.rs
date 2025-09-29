@@ -80,9 +80,9 @@ impl App {
     }
 
     fn select_project(&mut self) {
+        let input_content: usize = self.input.parse().unwrap();
         self.input.clear();
         self.reset_cursor();
-        let input_content: usize = self.input.parse().expect("balls");
         let path_strings: Vec<String> = self
             .paths
             .iter()
@@ -93,7 +93,7 @@ impl App {
         let name = dir.clone(); 
         // iterating through paths and picking based off number 
         // TODO: make this a string to string search 
-        self.open_or_create_tmux_session(name.trim(), dir); 
+        self.open_or_create_tmux_session(name.trim(), dir.to_string()); 
     }
 
     fn open_or_create_tmux_session(&self, name: &str, dir: String) -> io::Result<()> {
