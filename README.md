@@ -1,5 +1,5 @@
 # Quickshot 
-a CLI tool to make project sessions come quickly, written in Rust  
+a CLI tool to make tmux project sessions come quickly, written in Rust  
 
 To use, clone the project using 
 ```bash
