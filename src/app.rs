@@ -10,12 +10,15 @@ use ratatui::{
 use std::error::Error;
 use std::process::Command;
 use std::io;
+use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 
 pub struct App {
     input: String,
     input_mode: InputMode,
     character_index: usize,
     paths: Vec<PathBuf>,
+    filtered_paths: Vec<PathBuf>,
 } 
 
 enum InputMode {
@@ -30,8 +33,28 @@ impl App {
             input_mode: InputMode::Editing,
             character_index: 0,
             paths: Vec::new(),
+            filtered_paths: Vec::new(),
         }
     }
+
+    fn update_filter(&mut self) {
+        if self.input.is_empty() {
+            self.filtered_paths = self.paths.clone();
+            return; 
+        } 
+        let matcher = SkimMatcherV2::default(); 
+        let mut scored: Vec<_> = self 
+            .paths
+            .iter()
+            .filter_map(|p| {
+                let text = p.to_string_lossy();
+                matcher.fuzzy_match(&text, &self.input).map(|score| (score, p.clone()))
+            })
+            .collect(); 
+
+        scored.sort_by_key(|(score, _)| -score);
+        self.filtered_paths = scored.into_iter().map(|(_, p)| p).collect();
+    } 
 
     fn move_cursor_left(&mut self) {
         let cursor_moved_left = self.character_index.saturating_sub(1);
@@ -47,6 +70,7 @@ impl App {
         let index = self.byte_index(); 
         self.input.insert(index, new_char); 
         self.move_cursor_right(); 
+        self.update_filter();
     }
 
     fn byte_index(&self) -> usize {
@@ -69,6 +93,7 @@ impl App {
             self.input = before_char_to_delete.chain(after_char_to_delete).collect(); 
             self.move_cursor_left();
         } 
+        self.update_filter(); 
     } 
 
     fn clamp_cursor(&self, new_cursor_pos: usize) -> usize {
@@ -80,20 +105,11 @@ impl App {
     }
 
     fn select_project(&mut self) {
-        let input_content: usize = self.input.parse().unwrap();
-        self.input.clear();
-        self.reset_cursor();
-        let path_strings: Vec<String> = self
-            .paths
-            .iter()
-            .enumerate()
-            .map(|(i, m)| m.to_string_lossy().into_owned())
-            .collect();
-        let dir = path_strings[input_content].clone(); 
-        let name = dir.clone(); 
-        // iterating through paths and picking based off number 
-        // TODO: make this a string to string search 
-        self.open_or_create_tmux_session(name.trim(), dir.to_string()); 
+        if let Some(first_match) = self.filtered_paths.first() {
+            let name = first_match.file_name().unwrap_or_default().to_string_lossy().to_string();
+            let dir = first_match.to_string_lossy().to_string();
+            let _ = self.open_or_create_tmux_session(&name, dir);
+        }
     }
 
     fn open_or_create_tmux_session(&self, name: &str, dir: String) -> io::Result<()> {
@@ -112,6 +128,7 @@ impl App {
 
     pub fn run(mut self, mut terminal: DefaultTerminal, paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
         self.paths = paths;
+        self.filtered_paths = self.paths.clone(); 
         loop {
             terminal.draw(|frame| self.draw(frame))?;
             if let Event::Key(key) = event::read()? {
@@ -208,7 +225,7 @@ impl App {
 
 
         let paths: Vec<ListItem> = self
-            .paths
+            .filtered_paths
             .iter()
             .enumerate()
             .map(|(i, m)| {
