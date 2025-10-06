@@ -1,17 +1,10 @@
 mod app; 
+mod ui; 
 
 use std::io::{self, Write}; 
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
-use ratatui::{
-    crossterm::event::{self, Event, KeyCode, KeyEventKind},
-    layout::{Constraint, Layout, Position},
-    style::{Color, Modifier, Style, Stylize},
-    text::{Line, Span, Text},
-    widgets::{Block, List, ListItem, Paragraph},
-    DefaultTerminal, Frame,
-};
 use std::process::Command;
 
 use crate::app::App;
