@@ -26,11 +26,10 @@ in the prompt, just like this:
  If any errors occur, or you want to change your
 project directory go into quickshot.config and edit the dir variable to be like shown here.
 
-Once you are in type the number of the project directory you wish to open a tmux session in and press enter. 
+Once you are in type the name of the project directory you wish to open a tmux session in and press enter. 
 If you wish to escape use ESC twice. 
 
 TODO: 
-- [ ] Add search by name
 - [ ] Optimize for performance
 - [ ] Allow for editor in separate tmux window 
 - [ ] More customizations in quickshot.config 
