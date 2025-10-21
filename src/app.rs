@@ -3,6 +3,7 @@ use std::{
     io,
     path::PathBuf,
     process::Command,
+    fs,
 };
 use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
@@ -19,6 +20,7 @@ pub struct App {
     pub character_index: usize,
     pub paths: Vec<PathBuf>,
     pub filtered_paths: Vec<PathBuf>,
+    pub base_dir: Vec<PathBuf>, 
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,6 +37,7 @@ impl App {
             character_index: 0,
             paths: Vec::new(),
             filtered_paths: Vec::new(),
+            base_dir: Vec::new(), 
         }
     }
 
@@ -136,9 +139,23 @@ impl App {
         }
     }
 
-    pub fn run(mut self, mut terminal: DefaultTerminal, paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
+    fn create_directory(&mut self) -> io::Result<()> {
+        let base_dir = &self.base_dir[0]; 
+
+        let new_path = base_dir.join(&self.input);
+
+        fs::create_dir_all(&new_path)?;
+
+        self.paths.push(new_path);
+        self.update_filter();
+
+        Ok(())
+    }
+
+    pub fn run(mut self, mut terminal: DefaultTerminal, paths: Vec<PathBuf>, base_dir: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
         self.paths = paths;
         self.filtered_paths = self.paths.clone();
+        self.base_dir = base_dir; 
 
         loop {
             terminal.draw(|f| draw_ui(f, &self))?;
@@ -146,6 +163,7 @@ impl App {
             if let Event::Key(key) = event::read()? {
                 match self.input_mode {
                     InputMode::Tabbing => match key.code {
+                        KeyCode::Char('n') => self.create_directory()?, 
                         KeyCode::Char('e') => self.input_mode = InputMode::Editing,
                         KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
                         _ => {}

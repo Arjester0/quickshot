@@ -19,8 +19,10 @@ fn main() -> Result<(),Box<dyn Error>> {
     } 
     load_config(&mut dir); 
     let paths = get_paths(&dir)?;
+    let mut base_dir : Vec<PathBuf> = vec![];
+    base_dir.push(Path::new(&dir).to_path_buf());
     let terminal = ratatui::init(); 
-    let app_result = App::new().run(terminal, paths);
+    let app_result = App::new().run(terminal, paths, base_dir);
     ratatui::restore();
     app_result 
 }
